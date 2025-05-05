@@ -8,7 +8,7 @@ def carregar_dados():
     output = "dados.xlsx"
     gdown.download(url, output, quiet=False)
 
-    df = pd.read_excel(output)
+    df = pd.read_excel(output, sheet_name="Dados sistemas fechadas")
 
     df.columns = df.columns.str.strip()
     df['Abertura'] = pd.to_datetime(df['Abertura'], errors='coerce', dayfirst=True)
