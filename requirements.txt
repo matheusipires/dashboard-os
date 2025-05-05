@@ -1,6 +1,6 @@
-pandas
-matplotlib
-openpyxl
 streamlit
+pandas
 plotly
+openpyxl
 gdown
+
