@@ -158,7 +158,7 @@ pdfkit.from_string(html_completo, pdf_path, configuration=config)
 # 🔹 Enviar E-mail
 email = MIMEMultipart()
 email['From'] = "matheus.pires@orbisengenharia.com.br"
-email['To'] = "supervisores.clinica@orbisengenharia.com.br", "coordenadores.engenharia@orbisengenharia.com.br", "ricardo.maranhao@orbisengenharia.com.br", "qualidade@orbisengenharia.com.br", "guilherme.braz@orbisengenharia.com.br"
+email['To'] = "matheus.pires@orbisengenharia.com.br"
 email['Subject'] = f"📊 Departamento de Operações - Relatório de Conclusão de OS ({data_ref})"
 
 email.attach(MIMEText(html_completo, 'html'))
