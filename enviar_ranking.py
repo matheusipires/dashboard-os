@@ -163,7 +163,9 @@ destinatarios = [
     "coordenadores.engenharia@orbisengenharia.com.br",
     "ricardo.maranhao@orbisengenharia.com.br",
     "qualidade@orbisengenharia.com.br",
-    "guilherme.braz@orbisengenharia.com.br"
+    "guilherme.braz@orbisengenharia.com.br",
+    "manutencao@orbisengenharia.com.br",
+    "metrologia@orbisengenharia.com.br"
 ]
 
 email = MIMEMultipart()
