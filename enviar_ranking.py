@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 import locale
 import sys
+import shutil
 
 # Adiciona o diretório 'scripts' ao path do sistema para importar leitura_dados.py
 sys.path.append(os.path.join(os.path.dirname(__file__), 'scripts'))
@@ -22,8 +23,10 @@ except locale.Error:
 
 
 # Caminho do executável wkhtmltopdf
-path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+
+path_wkhtmltopdf = shutil.which("wkhtmltopdf")
 config = pdfkit.configuration(wkhtmltopdf=path_wkhtmltopdf)
+
 
 # 🔹 Leitura do banco de dados online
 df = carregar_dados()
