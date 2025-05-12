@@ -122,9 +122,15 @@ html_completo = f"""
   <body style="font-family:'Segoe UI', Tahoma, sans-serif;">
     {html_cards}
     {html_tabela}
-    <div style="margin-top:40px; font-size:12px; color:#999; text-align:center;">
-      Desenvolvido por Matheus Pires · Mensagem automática do sistema
-    </div>
+    <div style="text-align:center; margin:30px 0;">
+  <a href="https://dashbordoperacional.streamlit.app/" target="_blank" style="background-color:#1B556B; color:white; padding:12px 24px; border-radius:8px; text-decoration:none; font-size:15px; font-weight:bold; font-family:'Segoe UI', sans-serif;">
+    📊 Acessar Dashboard
+  </a>
+</div>
+
+<div style="margin-top:40px; font-size:12px; color:#999; text-align:center;">
+  Desenvolvido por Matheus Pires · Mensagem automática do sistema
+</div>
   </body>
 </html>
 """
