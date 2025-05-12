@@ -156,9 +156,19 @@ pdf_path = r"C:\Users\matheus.pires\Desktop\ranking_OS.pdf"
 pdfkit.from_string(html_completo, pdf_path, configuration=config)
 
 # 🔹 Enviar E-mail
+from email.utils import COMMASPACE
+
+destinatarios = [
+    "supervisores.clinica@orbisengenharia.com.br",
+    "coordenadores.engenharia@orbisengenharia.com.br",
+    "ricardo.maranhao@orbisengenharia.com.br",
+    "qualidade@orbisengenharia.com.br",
+    "guilherme.braz@orbisengenharia.com.br"
+]
+
 email = MIMEMultipart()
 email['From'] = "matheus.pires@orbisengenharia.com.br"
-email['To'] = ["supervisores.clinica@orbisengenharia.com.br", "coordenadores.engenharia@orbisengenharia.com.br", "ricardo.maranhao@orbisengenharia.com.br", "qualidade@orbisengenharia.com.br", "guilherme.braz@orbisengenharia.com.br"]
+email['To'] = COMMASPACE.join(destinatarios)
 email['Subject'] = f"📊 Departamento de Operações - Relatório de Conclusão de OS ({data_ref})"
 
 email.attach(MIMEText(html_completo, 'html'))
@@ -175,6 +185,7 @@ with smtplib.SMTP('smtp.gmail.com', 587) as server:
     server.starttls()
     senha = os.environ.get("EMAIL_SENHA")
     server.login("matheus.pires@orbisengenharia.com.br", senha)
-    server.send_message(email)
+    server.send_message(email, to_addrs=destinatarios)
 
 print("✅ E-mail enviado com sucesso.")
+
