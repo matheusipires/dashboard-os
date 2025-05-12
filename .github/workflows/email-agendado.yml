@@ -2,8 +2,8 @@ name: Enviar E-mail Mensal
 
 on:
   schedule:
-    - cron: '0 12 1 * *'  # Executa todo dia 1 do mês às 12:00 UTC (9:00 Brasília)
-  workflow_dispatch:       # Permite execução manual no GitHub
+    - cron: '0 12 1 * *'  # Executa dia 1 de cada mês às 12:00 UTC (9:00 Brasília)
+  workflow_dispatch:
 
 jobs:
   send_email:
