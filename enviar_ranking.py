@@ -15,7 +15,11 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'scripts'))
 from leitura_dados import carregar_dados
 
 # Definir localidade para português do Brasil
-locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
+try:
+    locale.setlocale(locale.LC_TIME, 'pt_BR.UTF-8')
+except locale.Error:
+    locale.setlocale(locale.LC_TIME, '')
+
 
 # Caminho do executável wkhtmltopdf
 path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
