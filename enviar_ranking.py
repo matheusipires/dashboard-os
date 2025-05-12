@@ -157,7 +157,8 @@ with open(pdf_path, "rb") as f:
 
 with smtplib.SMTP('smtp.gmail.com', 587) as server:
     server.starttls()
-    server.login("matheus.pires@orbisengenharia.com.br", "lpbs nlus qnwa neee")
+    senha = os.environ.get("EMAIL_SENHA")
+    server.login("matheus.pires@orbisengenharia.com.br", senha)
     server.send_message(email)
 
 print("✅ E-mail enviado com sucesso.")
