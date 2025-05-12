@@ -20,7 +20,7 @@ jobs:
 
       - name: Instalar dependências
         run: |
-          pip install pandas pdfkit openpyxl
+          pip install pandas pdfkit openpyxl streamlit
 
       - name: Instalar wkhtmltopdf
         run: |
