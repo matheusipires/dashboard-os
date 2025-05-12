@@ -7,7 +7,11 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from scripts.leitura_dados import carregar_dados
+from components.graficos import grafico_kpi, grafico_evolucao
+from urllib.parse import urlencode
 import base64
+import locale
+
 
 # ✅ Precisa ser o primeiro comando do Streamlit
 st.set_page_config(page_title="Dashboard OS", layout="wide")
@@ -25,9 +29,11 @@ with open("app/styles/components.html", encoding="utf-8") as f:
     html = f.read().format(logo_base64=logo_base64)
     st.markdown(html, unsafe_allow_html=True)
 
+
 # ✅ Carrega o CSS externo
 with open("app/styles/layout.css", encoding="utf-8") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 
 # (continue com o restante do seu código aqui...)
 
@@ -36,246 +42,231 @@ COR_LARANJA = '#E98C5F'
 COR_VERDE = '#32AF9D'
 
 with st.spinner("Carregando dados..."):
+
     df = carregar_dados()
 
-df = df[df['CLIENTE'].notna() & (df['CLIENTE'].str.strip() != "-")]
+    df = df[df['CLIENTE'].notna() & (df['CLIENTE'].str.strip() != "-")]
+    
+# ✅ Filtros fora da sidebar: Período
+st.markdown("### 📆 Selecione o Período de Abertura")
+data_min = df['Abertura'].min().date()
+data_max = df['Abertura'].max().date()
+intervalo = st.date_input(
+    "Período de abertura:",
+    [data_min, data_max],
+    min_value=data_min,
+    max_value=data_max
+)
 
-# Criando colunas auxiliares
-df['Mês_Abertura'] = df['Abertura'].dt.to_period('M').astype(str)
-df['Mês_Fechamento'] = df['Fechamento'].dt.to_period('M').astype(str)
+# Verifica se o usuário selecionou duas datas
+if len(intervalo) != 2:
+    st.warning("⚠️ Por favor, selecione um **intervalo válido** com data de início e fim.")
+    st.stop()
 
+data_inicio, data_fim = intervalo
+
+
+# ✅ Filtros na sidebar
 with st.sidebar:
     st.header("🔎 Filtros")
     with st.expander("🎯 Selecione os filtros"):
-        clientes = sorted(df['CLIENTE'].unique())
+
+        # Filtro CLIENTE
+        clientes = sorted(df['CLIENTE'].dropna().unique())
         todos_clientes = st.checkbox("Selecionar todos os clientes", value=True)
         clientes_selecionados = clientes if todos_clientes else st.multiselect("Unidade", clientes)
 
+        # Filtro TIPO DE MANUTENÇÃO2
         tipos = sorted(df['TIPO DE MANUTENÇÃO2'].dropna().unique())
         todos_tipos = st.checkbox("Selecionar todos os tipos de manutenção", value=True)
         tipos_selecionados = tipos if todos_tipos else st.multiselect("Tipo de manutenção", tipos)
 
-    data_min = df['Abertura'].min().date()
-    data_max = df['Abertura'].max().date()
-    data_inicio, data_fim = st.date_input("Período de abertura:", [data_min, data_max], min_value=data_min, max_value=data_max)
+        # Filtro SUPERVISOR
+        supervisores = sorted(df['SUPERVISOR'].dropna().unique())
+        todos_supervisores = st.checkbox("Todos os supervisores", value=True)
+        supervisores_selecionados = supervisores if todos_supervisores else st.multiselect("Supervisor", supervisores)
+
+        # Filtro COORDENADOR
+        coordenadores = sorted(df['COORDENADOR'].dropna().unique())
+        todos_coordenadores = st.checkbox("Todos os coordenadores", value=True)
+        coordenadores_selecionados = coordenadores if todos_coordenadores else st.multiselect("Coordenador", coordenadores)
+
+        # Filtro REGIÃO
+        regioes = sorted(df['REGIÃO'].dropna().unique())
+        todas_regioes = st.checkbox("Todas as regiões", value=True)
+        regioes_selecionadas = regioes if todas_regioes else st.multiselect("Região", regioes)
+
+        # Filtro CIDADE
+        cidades = sorted(df['CIDADE'].dropna().unique())
+        todas_cidades = st.checkbox("Todas as cidades", value=True)
+        cidades_selecionadas = cidades if todas_cidades else st.multiselect("Cidade", cidades)
+
+        # Filtro GRUPO
+        grupos = sorted(df['GRUPO'].dropna().unique())
+        todos_grupos = st.checkbox("Todos os grupos", value=True)
+        grupos_selecionados = grupos if todos_grupos else st.multiselect("Grupo", grupos)
+
+    # ✅ Mostrar filtros ativos
+    with st.expander("📌 Filtros Selecionados"):
+        st.markdown(f"""
+        - **Clientes:** {', '.join(clientes_selecionados)}
+        - **Tipos de manutenção:** {', '.join(tipos_selecionados)}
+        - **Supervisores:** {', '.join(supervisores_selecionados)}
+        - **Coordenadores:** {', '.join(coordenadores_selecionados)}
+        - **Regiões:** {', '.join(regioes_selecionadas)}
+        - **Cidades:** {', '.join(cidades_selecionadas)}
+        - **Grupos:** {', '.join(grupos_selecionados)}
+        """)
+
+st.markdown(
+    f"🗓️ Intervalo selecionado: **{data_inicio.strftime('%d/%m/%Y')}** até **{data_fim.strftime('%d/%m/%Y')}**"
+)
 
 df_filtrado = df[
     (df['CLIENTE'].isin(clientes_selecionados)) &
     (df['TIPO DE MANUTENÇÃO2'].isin(tipos_selecionados)) &
+    (df['SUPERVISOR'].isin(supervisores_selecionados)) &
+    (df['COORDENADOR'].isin(coordenadores_selecionados)) &
+    (df['REGIÃO'].isin(regioes_selecionadas)) &
+    (df['CIDADE'].isin(cidades_selecionadas)) &
+    (df['GRUPO'].isin(grupos_selecionados)) &
     (df['Abertura'].dt.date >= data_inicio) &
     (df['Abertura'].dt.date <= data_fim)
 ].copy()
+
+
 
 situacoes = df_filtrado['SITUAÇÃO OS'].str.lower().str.strip()
 
 
     # Cards
-total_os = len(df_filtrado)
-abertas = (situacoes == 'aberta').sum()
-pendentes = (situacoes == 'pendente').sum()
-fechadas = (situacoes == 'fechada').sum()
-taxa = f"{(fechadas / total_os * 100) if total_os > 0 else 0:,.1f}%".replace('.', ',')
+# 🔄 Atualiza valores com mesma lógica dos gráficos
+df_validas = df_filtrado[df_filtrado['SITUAÇÃO OS'].isin(['Aberta', 'Pendente', 'Fechada'])].copy()
+total_os = len(df_validas)
 
-st.markdown("---")
-# Atualiza valores combinados
-pendentes_total = abertas + pendentes
+# Pendentes = Aberta + Pendente
+pendentes_total = df_validas[df_validas['SITUAÇÃO OS'].isin(['Aberta', 'Pendente'])].shape[0]
 
-# Cria os cards com botão para painel futuro
+# Concluídas no mesmo mês da abertura
+df_validas['Mes_Abertura'] = df_validas['Abertura'].dt.to_period('M')
+df_validas['Mes_Fechamento'] = df_validas['Fechamento'].dt.to_period('M')
+concluidas_mesmo_mes = df_validas[
+    (df_validas['SITUAÇÃO OS'] == 'Fechada') &
+    (df_validas['Mes_Abertura'] == df_validas['Mes_Fechamento'])
+].shape[0]
+
+# % Conclusão
+taxa = f"{(concluidas_mesmo_mes / total_os * 100) if total_os > 0 else 0:.1f}%".replace('.', ',')
+
+# 🔤 Cards
 st.markdown(f"""
-<div style="display:flex; flex-wrap:wrap; gap:1rem;">
-    <div style="flex:1; min-width:180px; background-color:#f0f2f6; padding:1rem; border-radius:8px;">
-        <h4>🔧 Total de OS</h4>
-        <h2>{total_os}</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem;">
+    <div style="flex: 1; min-width: 180px; background: linear-gradient(135deg, #1B556B, #3e7c91); padding: 1rem; border-radius: 10px; color: white; box-shadow: 2px 2px 6px rgba(0,0,0,0.1);">
+        <div style="font-size: 0.9rem;">🔧 Total de OS</div>
+        <div style="font-size: 1.8rem; font-weight: bold;">{total_os}</div>
     </div>
-    <div style="flex:1; min-width:180px; background-color:#fff3cd; padding:1rem; border-radius:8px;">
-        <h4>⚠️ Pendentes</h4>
-        <h2>{pendentes_total}</h2>
-        <a href='?aba=pendentes'>
-            <button style="margin-top:0.5rem; padding:0.5rem 1rem; border:none; background-color:#1B556B; color:white; border-radius:5px;">Ver detalhes</button>
-        </a>
+    <div style="flex: 1; min-width: 180px; background: linear-gradient(135deg, #ffc107, #ffcd39); padding: 1rem; border-radius: 10px; color: #333; box-shadow: 2px 2px 6px rgba(0,0,0,0.1);">
+        <div style="font-size: 0.9rem;">⚠️ Pendentes</div>
+        <div style="font-size: 1.8rem; font-weight: bold;">{pendentes_total}</div>
     </div>
-    <div style="flex:1; min-width:180px; background-color:#d4edda; padding:1rem; border-radius:8px;">
-        <h4>✅ Concluídas</h4>
-        <h2>{fechadas}</h2>
+    <div style="flex: 1; min-width: 180px; background: linear-gradient(135deg, #28a745, #5cd081); padding: 1rem; border-radius: 10px; color: white; box-shadow: 2px 2px 6px rgba(0,0,0,0.1);">
+        <div style="font-size: 0.9rem;">✅ Concluídas (mesmo mês)</div>
+        <div style="font-size: 1.8rem; font-weight: bold;">{concluidas_mesmo_mes}</div>
     </div>
-    <div style="flex:1; min-width:180px; background-color:#e2e3e5; padding:1rem; border-radius:8px;">
-        <h4>📈 % Conclusão</h4>
-        <h2>{taxa}</h2>
-    </div>
-    <div style="flex:1; min-width:220px; background-color:#d1ecf1; padding:1rem; border-radius:8px;">
-        <h4>📊 Período</h4>
-        <h2>{data_inicio.strftime('%d/%m/%Y')} - {data_fim.strftime('%d/%m/%Y')}</h2>
+    <div style="flex: 1; min-width: 180px; background: linear-gradient(135deg, #6c757d, #adb5bd); padding: 1rem; border-radius: 10px; color: white; box-shadow: 2px 2px 6px rgba(0,0,0,0.1);">
+        <div style="font-size: 0.9rem;">📈 % Conclusão</div>
+        <div style="font-size: 1.8rem; font-weight: bold;">{taxa}</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 
-    # Dados para gráfico KPI
+# 📊 KPI - Acompanhamento de Abertura e Fechamento de OS por Mês
+
+# Filtra somente OS válidas para o gráfico
 df_total = df_filtrado[df_filtrado['SITUAÇÃO OS'].isin(['Aberta', 'Pendente', 'Fechada'])].copy()
-df_total['Mes_Ano'] = df_total['Abertura'].dt.to_period('M').astype(str)
+df_total['Mes_Ano'] = df_total['Abertura'].dt.to_period('M').astype(str)  # formato '2025-01'
 
 df_fechadas_mesmo_mes = df_filtrado[
-        (df_filtrado['SITUAÇÃO OS'] == 'Fechada') &
-        (df_filtrado['Fechamento'].notna()) &
-        (df_filtrado['Abertura'].dt.to_period('M') == df_filtrado['Fechamento'].dt.to_period('M'))
-    ].copy()
+    (df_filtrado['SITUAÇÃO OS'] == 'Fechada') &
+    (df_filtrado['Fechamento'].notna()) &
+    (df_filtrado['Abertura'].dt.to_period('M') == df_filtrado['Fechamento'].dt.to_period('M'))
+].copy()
 df_fechadas_mesmo_mes['Mes_Ano'] = df_fechadas_mesmo_mes['Abertura'].dt.to_period('M').astype(str)
 
+# Agrupamentos
 grupo_total = df_total.groupby('Mes_Ano')['OS'].count().reset_index(name='Total')
 grupo_fechadas = df_fechadas_mesmo_mes.groupby('Mes_Ano')['OS'].count().reset_index(name='Fechadas')
-
 grupo_mes = grupo_total.merge(grupo_fechadas, on='Mes_Ano', how='left').fillna(0)
 grupo_mes['% Conclusão'] = (grupo_mes['Fechadas'] / grupo_mes['Total']) * 100
-grupo_final = grupo_mes.copy()
-grupo_final['% Conclusão'] = grupo_final['% Conclusão'].round(1)
-grupo_final_sorted = grupo_final.sort_values('Mes_Ano').reset_index(drop=True)
 
-    # Gráfico
-    # Gráfico KPI Abertas x Fechadas com rótulos e cabeçalho melhorado
-fig = go.Figure()
-fig.add_trace(go.Bar(
-    x=grupo_mes['Mes_Ano'],
-    y=grupo_mes['Total'],
-    name='Total de OS Abertas',
-    marker_color=COR_AZUL,
-    text=grupo_mes['Total'],
-    textposition='auto'
-))
-fig.add_trace(go.Bar(
-    x=grupo_mes['Mes_Ano'],
-    y=grupo_mes['Fechadas'],
-    name='Fechadas no mesmo mês',
-    marker_color=COR_VERDE,
-    text=grupo_mes['Fechadas'],
-    textposition='auto'
-))
-fig.add_trace(go.Scatter(
-    x=grupo_mes['Mes_Ano'],
-    y=grupo_mes['% Conclusão'],
-    name='% Conclusão',
-    mode='lines+markers+text',
-    line=dict(color=COR_LARANJA, dash='dash'),
-    text=[f"{x:.1f}%" for x in grupo_mes['% Conclusão']],
-    textposition="top center",
-    yaxis='y2'
-))
+# Conversão para ordenação correta
+grupo_mes['Mes_Ano_Date'] = pd.to_datetime(grupo_mes['Mes_Ano'], format='%Y-%m')
+grupo_final_sorted = grupo_mes.sort_values('Mes_Ano_Date').reset_index(drop=True)
+grupo_final_sorted['Mes_Ano_Formatado'] = grupo_final_sorted['Mes_Ano_Date'].dt.strftime('%b/%y').str.capitalize()
 
-# Cabeçalho padronizado
+# Gráfico KPI
 st.markdown("### 📊 KPI - Acompanhamento de Abertura e Fechamento de OS por Mês")
+fig_kpi = grafico_kpi(grupo_final_sorted, COR_AZUL, COR_VERDE, COR_LARANJA)
+st.plotly_chart(fig_kpi, use_container_width=True)
 
-fig.update_layout(
-    xaxis_title='Mês',
-    yaxis=dict(title='Quantidade de OS'),
-    yaxis2=dict(title='% Conclusão', overlaying='y', side='right', range=[0, 100]),
-    barmode='group',
-    legend=dict(orientation='h', y=-0.25),
-    height=480
-)
-
-st.plotly_chart(fig, use_container_width=True)
-
-# 📈 Criando o gráfico de linha com rótulos de dados
-fig_evolucao = go.Figure()
-
-# Linha de % Conclusão
-fig_evolucao.add_trace(go.Scatter(
-    x=grupo_final_sorted['Mes_Ano'],
-    y=grupo_final_sorted['% Conclusão'],
-    mode='lines+markers+text',
-    name='% Conclusão',
-    text=[f'{v:.1f}%' for v in grupo_final_sorted['% Conclusão']],
-    textposition='top center',
-    line=dict(color='#1B556B')
-))
-
-# Linha de Meta (90%)
-fig_evolucao.add_trace(go.Scatter(
-    x=grupo_final_sorted['Mes_Ano'],
-    y=[90] * len(grupo_final_sorted),
-    mode='lines',
-    name='Meta (90%)',
-    line=dict(color='#E98C5F', dash='dash')
-))
-
-# Layout do gráfico
-fig_evolucao.update_layout(
-    title='📈 Evolução Mensal da % Conclusão',
-    xaxis_title='Mês',
-    yaxis_title='% Conclusão',
-    yaxis=dict(range=[0, 100]),
-    height=400,
-    legend=dict(orientation='h', y=-0.2),
-    margin=dict(l=40, r=40, t=80, b=40)
-    
-)
+# Gráfico de Evolução
+fig_evolucao = grafico_evolucao(grupo_final_sorted, COR_AZUL, COR_LARANJA)
 st.plotly_chart(fig_evolucao, use_container_width=True)
 
-st.markdown("### 🛠️ Ranking de % Conclusão por Tipo de Manutenção")
 
-# Garantir colunas auxiliares
+st.markdown("### 🏆 Rankings de % Conclusão")
+
+opcao_ranking = st.radio("Escolha o tipo de ranking:", ["Por Cliente", "Por Tipo de Manutenção"], horizontal=True)
+
+# Criar colunas auxiliares
 df_filtrado['Mes_Abertura'] = df_filtrado['Abertura'].dt.to_period('M').astype(str)
 df_filtrado['Mes_Fechamento'] = df_filtrado['Fechamento'].dt.to_period('M').astype(str)
-
-# Filtrar OS válidas
-df_validas_tipo = df_filtrado[df_filtrado['SITUAÇÃO OS'].isin(['Aberta', 'Pendente', 'Fechada'])].copy()
-
-# Total por tipo de manutenção
-total_tipo = df_validas_tipo.groupby('TIPO DE MANUTENÇÃO2')['OS'].count().reset_index(name='Total_OS')
-
-# Fechadas dentro do mesmo mês de abertura
-df_fechadas_mesmo_mes_tipo = df_validas_tipo[
-    (df_validas_tipo['SITUAÇÃO OS'] == 'Fechada') &
-    (df_validas_tipo['Mes_Abertura'] == df_validas_tipo['Mes_Fechamento'])
-]
-fechadas_tipo = df_fechadas_mesmo_mes_tipo.groupby('TIPO DE MANUTENÇÃO2')['OS'].count().reset_index(name='Fechadas_no_Mes')
-
-# Juntar e calcular
-ranking_tipo = pd.merge(total_tipo, fechadas_tipo, on='TIPO DE MANUTENÇÃO2', how='left').fillna(0)
-ranking_tipo['% Conclusão'] = (ranking_tipo['Fechadas_no_Mes'] / ranking_tipo['Total_OS']) * 100
-
-ranking_tipo = ranking_tipo.sort_values(by='% Conclusão', ascending=False).reset_index(drop=True)
-ranking_tipo['Classificação'] = ranking_tipo.index + 1
-ranking_tipo['% Conclusão'] = ranking_tipo['% Conclusão'].map("{:.1f}%".format)
-
-# Mostrar tabela
-st.dataframe(
-    ranking_tipo[['Classificação', 'TIPO DE MANUTENÇÃO2', '% Conclusão']],
-    use_container_width=True
-)
-    
-# Criação das colunas auxiliares no DataFrame filtrado
-df_filtrado['Mês_Abertura'] = df_filtrado['Abertura'].dt.to_period('M').astype(str)
-df_filtrado['Mês_Fechamento'] = df_filtrado['Fechamento'].dt.to_period('M').astype(str)
-
-# RANKING % CONCLUSÃO POR CLIENTE (baseado em fechamento no mesmo mês da abertura)
-st.markdown("### 🏆 Ranking de % Conclusão por CLIENTE")
-
-df_filtrado['Mes_Abertura'] = df_filtrado['Abertura'].dt.to_period('M').astype(str)
-df_filtrado['Mes_Fechamento'] = df_filtrado['Fechamento'].dt.to_period('M').astype(str)
-
-# Filtra OS válidas
 df_validas = df_filtrado[df_filtrado['SITUAÇÃO OS'].isin(['Aberta', 'Pendente', 'Fechada'])].copy()
 
-# Total de OS por CLIENTE
-total_os = df_validas.groupby('CLIENTE')['OS'].count().reset_index(name='Total_OS')
+if opcao_ranking == "Por Cliente":
+    # Total de OS por cliente
+    total_os = df_validas.groupby('CLIENTE')['OS'].count().reset_index(name='Abertas')
 
-# Fechadas no mesmo mês da abertura
-df_fechadas_mesmo_mes = df_validas[
-    (df_validas['SITUAÇÃO OS'] == 'Fechada') &
-    (df_validas['Mes_Abertura'] == df_validas['Mes_Fechamento'])
-]
-fechadas_mesmo_mes = df_fechadas_mesmo_mes.groupby('CLIENTE')['OS'].count().reset_index(name='Fechadas_no_Mes')
+    # Fechadas dentro do mesmo mês da abertura
+    df_fechadas = df_validas[
+        (df_validas['SITUAÇÃO OS'] == 'Fechada') &
+        (df_validas['Mes_Abertura'] == df_validas['Mes_Fechamento'])
+    ]
+    fechadas = df_fechadas.groupby('CLIENTE')['OS'].count().reset_index(name='Fechadas')
 
-# Merge e cálculo da % conclusão
-ranking = pd.merge(total_os, fechadas_mesmo_mes, on='CLIENTE', how='left').fillna(0)
-ranking['% Conclusão'] = (ranking['Fechadas_no_Mes'] / ranking['Total_OS']) * 100
+    # Juntar e calcular ranking
+    ranking = pd.merge(total_os, fechadas, on='CLIENTE', how='left').fillna(0)
+    ranking['% Conclusão'] = (ranking['Fechadas'] / ranking['Abertas']) * 100
+    ranking = ranking.sort_values(by='% Conclusão', ascending=False).reset_index(drop=True)
+    ranking['Classificação'] = ranking.index + 1
+    ranking['% Conclusão'] = ranking['% Conclusão'].round(1).astype(str) + '%'
 
-ranking = ranking.sort_values(by='% Conclusão', ascending=False).reset_index(drop=True)
-ranking['Classificação'] = ranking.index + 1
-ranking['% Conclusão'] = ranking['% Conclusão'].map("{:.1f}%".format)
+    st.dataframe(
+        ranking[['Classificação', 'CLIENTE', 'Abertas', 'Fechadas', '% Conclusão']],
+        use_container_width=True,
+        hide_index=True
+    )
 
-# Exibe a tabela
-st.dataframe(
-    ranking[['Classificação', 'CLIENTE', '% Conclusão']],
-    use_container_width=True
-)
+elif opcao_ranking == "Por Tipo de Manutenção":
+    total_tipo = df_validas.groupby('TIPO DE MANUTENÇÃO2')['OS'].count().reset_index(name='Abertas')
+
+    df_fechadas_tipo = df_validas[
+        (df_validas['SITUAÇÃO OS'] == 'Fechada') &
+        (df_validas['Mes_Abertura'] == df_validas['Mes_Fechamento'])
+    ]
+    fechadas_tipo = df_fechadas_tipo.groupby('TIPO DE MANUTENÇÃO2')['OS'].count().reset_index(name='Fechadas')
+
+    ranking_tipo = pd.merge(total_tipo, fechadas_tipo, on='TIPO DE MANUTENÇÃO2', how='left').fillna(0)
+    ranking_tipo['% Conclusão'] = (ranking_tipo['Fechadas'] / ranking_tipo['Abertas']) * 100
+    ranking_tipo = ranking_tipo.sort_values(by='% Conclusão', ascending=False).reset_index(drop=True)
+    ranking_tipo['Classificação'] = ranking_tipo.index + 1
+    ranking_tipo['% Conclusão'] = ranking_tipo['% Conclusão'].round(1).astype(str) + '%'
+
+    st.dataframe(
+        ranking_tipo[['Classificação', 'TIPO DE MANUTENÇÃO2', 'Abertas', 'Fechadas', '% Conclusão']],
+        use_container_width=True,
+        hide_index=True
+    )
+
+
