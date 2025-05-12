@@ -68,7 +68,16 @@ total_fechadas_mesmo_mes = len(fechadas_mesmo_mes)
 porcentagem_conclusao = (total_fechadas_mesmo_mes / total_abertas * 100) if total_abertas > 0 else 0
 
 # 🔹 Gerar HTML dos cards e tabela
-data_ref = datetime.now().strftime('%B de %Y').title()
+from datetime import datetime
+
+meses_pt = {
+    1: 'janeiro', 2: 'fevereiro', 3: 'março', 4: 'abril',
+    5: 'maio', 6: 'junho', 7: 'julho', 8: 'agosto',
+    9: 'setembro', 10: 'outubro', 11: 'novembro', 12: 'dezembro'
+}
+
+agora = datetime.now()
+data_ref = f"{meses_pt[agora.month].capitalize()} de {agora.year}"
 
 html_cards = f"""
 <div style="font-family:'Segoe UI', Tahoma, sans-serif; margin-bottom:30px;">
