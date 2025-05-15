@@ -1,20 +1,17 @@
 import pandas as pd
+import streamlit as st
 
+@st.cache_data
 def carregar_dados():
-    import gdown
-
-    # Link do seu Google Drive com download direto
     url = "https://drive.google.com/uc?export=download&id=1nwiU-O9DNjWGJ2C5PMp65uG2YBVoZnxM"
-    output = "dados.xlsx"
-    gdown.download(url, output, quiet=False)
-
-    df = pd.read_excel(output, sheet_name="Dados sistemas fechadas")
-
-    df.columns = df.columns.str.strip()
-    df['Abertura'] = pd.to_datetime(df['Abertura'], errors='coerce', dayfirst=True)
-    df['Fechamento'] = pd.to_datetime(df['Fechamento'], errors='coerce', dayfirst=True)  # ✅ necessário
-
-    df = df.dropna(subset=['Abertura'])
+    
+    # Carrega a planilha usando o nome correto da aba
+    df = pd.read_excel(url, sheet_name="Dados sistemas fechadas")
+    
+    # Garante que as colunas de datas estão em datetime
+    df['Abertura'] = pd.to_datetime(df['Abertura'], errors='coerce')
+    df['Fechamento'] = pd.to_datetime(df['Fechamento'], errors='coerce')
+    
     return df
 
 
