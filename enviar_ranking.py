@@ -159,14 +159,7 @@ pdfkit.from_string(html_completo, pdf_path, configuration=config)
 from email.utils import COMMASPACE
 
 destinatarios = [
-    "supervisores.clinica@orbisengenharia.com.br",
-    "coordenadores.engenharia@orbisengenharia.com.br",
-    "ricardo.maranhao@orbisengenharia.com.br",
-    "qualidade@orbisengenharia.com.br",
-    "guilherme.braz@orbisengenharia.com.br",
-    "manutencao@orbisengenharia.com.br",
-    "metrologia@orbisengenharia.com.br",
-    "comercial@orbisengenharia.com.br"
+   "matheus.pires@orbisengenharia.com.br"
 ]
 
 email = MIMEMultipart()
