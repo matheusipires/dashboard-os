@@ -18,7 +18,7 @@ st.set_page_config(page_title="Dashboard OS", layout="wide")
 
 # ✅ Gera logo em base64
 def get_logo_base64():
-    with open("app/assets/logo.png", "rb") as image_file:
+    with open("app/styles/components.html", encoding="utf-8") as f:
         encoded = base64.b64encode(image_file.read()).decode()
         return f"data:image/png;base64,{encoded}"
 
