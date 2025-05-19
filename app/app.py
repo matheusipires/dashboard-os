@@ -399,7 +399,7 @@ def gerar_ranking_problemas(serie, titulo_coluna):
         else:
             return "color: #888;"
 
-    styled_df = df_resultado.style.applymap(estilo_porcentagem, subset=["% do Total"])
+    styled_df = df_resultado.style.map(estilo_porcentagem, subset=["% do Total"])
     st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
 # Aplica a função conforme a aba selecionada
